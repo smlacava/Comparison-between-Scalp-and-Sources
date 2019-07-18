@@ -1,4 +1,4 @@
-%% Multiple T test (Mann-Whitney/Wilcoxon) & Spearman correlation
+%% PSD Multiple T test (Mann-Whitney/Wilcoxon) & Spearman correlation
 % sig contiene banda, canale e differenza tra le medie tra le PSD relative
 % tra PAT e HC (scalpo)
 % sig_s contiene banda, ROI e differenza tra le medie tra le PSD relative
@@ -30,12 +30,12 @@ BDIhc = BDI(BDI(:,2)<8,2);
 nbands = size(PSD_HC,2);  % number of frequency bands
 loc = size(PSD_HC,3);     % number of channels
 loc_s = size(PSDs_HC,3);  % number of ROI
-Ps = zeros(nbands, loc);  % matrice di significatività per le sorgenti
-P = zeros(nbands,loc_s);  % matrice di significatività per lo scalpo
+P = zeros(nbands, loc);  % matrice di significatività per lo scalpo
+Ps = zeros(nbands,loc_s);  % matrice di significatività per le sorgenti
 
 % conservatività (loc*nbands, loc o 1)
-cons = loc*nbands;               % conservatività per lo scalpo
-cons_s = loc_s*nbands;           % conservatività per le sorgenti
+cons = 1;               % conservatività per lo scalpo
+cons_s = 1;           % conservatività per le sorgenti
 
 ROI = {'caudalanteriorcingulate L', 'caudalanteriorcingulate R', 'caudalmiddlefrontal L', 'caudalmiddlefrontal R', 'cuneus L', 'cuneus R', 'frontalpole L', 'frontalpole R', 'fusiform L', 'fusiform R', 'inferiorparietal L', 'inferiorparietal R', 'inferiortemporal L', 'inferiortemporal R', 'insula L', 'insula R', 'isthmuscingulate L', 'isthmuscingulate R', 'lateraloccipital L', 'lateraloccipital R', 'lateralorbitofrontal L', 'lateralorbitofrontal R', 'lingual R', 'lingual L', 'medialorbitofrontal L', 'medialorbitofrontal R', 'middletemporal L', 'middletemporal R', 'parahippocampal L', 'parahippocampal R', 'parsopercularis L', 'parsopercularis R', 'parsorbitalis L', 'parsorbitalis R', 'parstriangularis L', 'parstriangularis R', 'posteriorcingulate L', 'posteriorcingulate R', 'precuneus L', 'precuneus R', 'rostralanteriorcingulate L', 'rostralanteriorcingulate R', 'rostralmiddlefrontal L', 'rostralmiddlefrontal R', 'superiorfrontal L', 'superiorfrontal R', 'superiorparietal L', 'superiorparietal R', 'superiortemporal L', 'superiortemporal R', 'supramarginal L', 'supramarginal R'};
 bands = {'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'};
@@ -63,7 +63,6 @@ end
 
 % Scalpo
 sig={'Band', 'Channel','meanPAT-meanHC'};
-RHO=[];
 for i = 1:nbands
     for j = 1:loc
         if P(i,j)<0.05/cons
@@ -86,11 +85,6 @@ for i = 1:nbands
     for j = 1:loc_s
         if Ps(i,j)<0.05/cons_s
             sig_s=[sig_s; bands(1,i), ROI(1,j), mean(PSDs_DEP(:,i,j),1)-mean(PSDs_HC(:,i,j),1)];
-            %figure
-            %scatter(BDIdep, PSDs_DEP(:,i,j),'r')
-            %hold on
-            %scatter(BDIhc, PSDs_HC(:,i,j),'b')
-            title(strcat(bands(1,i),'-',ROI(1,j)))
         end
     end
 end
@@ -105,19 +99,20 @@ pval=rho;
 for i = 1:nbands
     for j = 1:loc
         [rho(i,j), pval(i,j)]=corr(BDIdep,PSD_DEP(:,i,j),'type','Spearman');
-        scatter(BDIdep,PSD_DEP(:,i,j))
-        hold on
     end
 end
-title('PSD scalpo - BDI')
-hold off
-[x,y]=find(pval<0.05);
+
+[x,y]=find(pval<(0.05/cons));
 correlated=[];
-for k=1:max(size(x))
-    correlated=[correlated; bands(x(k)),channels(y(k)),rho(x(k),y(k))];
+if isempty(x)==0
+    for k=1:max(size(x))
+        correlated=[correlated; bands(x(k)),channels(y(k)),rho(x(k),y(k))];
+        figure
+        scatter(BDIdep,PSD_DEP(:,x(k),y(k)))
+        title(strcat(bands(x(k)),'-',channels(y(k))))
+    end
 end
 
-figure
 
 % Sorgenti
 rho_s=zeros(nbands,loc_s);
@@ -125,14 +120,16 @@ pval_s=rho_s;
 for i = 1:nbands
     for j = 1:loc_s
         [rho_s(i,j), pval_s(i,j)]=corr(BDIdep,PSDs_DEP(:,i,j),'type','Spearman');
-        scatter(BDIdep,PSDs_DEP(:,i,j))
-        hold on
     end
 end
-title('PSD sorgenti - BDI')
-hold off
-[x,y]=find(pval_s<0.05);
+
+[x,y]=find(pval_s<(0.05/cons_s));
 correlated_s=[];
-for k=1:max(size(x))
-    correlated_s=[correlated_s; bands(x(k)),channels(y(k)),rho(x(k),y(k))];
+if isempty(x)==0
+    for k=1:max(size(x))
+        correlated_s=[correlated_s; bands(x(k)),ROI(y(k)),rho_s(x(k),y(k))];
+        figure
+        scatter(BDIdep,PSDs_DEP(:,x(k),y(k)))
+        title(strcat(bands(x(k)),'-',ROI(y(k))))
+    end
 end
